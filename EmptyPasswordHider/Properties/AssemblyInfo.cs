@@ -6,8 +6,8 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("QualityHighlighter")]
-[assembly: AssemblyDescription("A plugin for Keepass that highlights entries based on their password quality.")]
+[assembly: AssemblyTitle("EmptyPasswordHider")]
+[assembly: AssemblyDescription("A plugin for Keepass that hides empty passwords.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Scott Richter")]
 [assembly: AssemblyProduct("KeePass Plugin")]

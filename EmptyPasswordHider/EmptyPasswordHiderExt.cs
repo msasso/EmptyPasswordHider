@@ -1,5 +1,5 @@
 ﻿/*
-  QualityHighlighter plugin for KeePass 2.x.
+  EmptyPasswordHider plugin for KeePass 2.x.
   Copyright (C) 2016 by Scott Richter <scott.d.richter@gmail.com>
 
   Modified by jaege <jaege8@gmail.com>
@@ -32,41 +32,30 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace QualityHighlighter
+namespace EmptyPasswordHider
 {
     /// <summary>
-    /// A simple plugin to highlight rows in the KeePass database based on password quality.
+    /// A simple plugin to hide empty passwords in the KeePass database
     /// Allows for easily spotting weak passwords.
     /// </summary>
-    public class QualityHighlighterExt : Plugin
+    public class EmptyPasswordHiderExt : Plugin
     {
         /// <summary>
-        /// Name of the custom toolbar button to toggle the highlights.
+        /// Name of the custom toolbar button to toggle the visibility.
         /// </summary>
-        private const string ToggleBtnCommand = "QualityHighlighterToggle";
+        private const string ToggleBtnCommand = "EmptyPasswordHiderToggle";
 
         /// <summary>
         /// Name of the config setting for this plugin.
         /// </summary>
-        private const string CustomConfigName = "QHL_HighlightsOn";
+        private const string CustomConfigName = "EmptyPasswordHiderOn";
 
         private IPluginHost _host = null;
-        private bool _highlightsOn = true;
-
-        //Quality classification cutoffs, populated per KeePass website.
-        //In the future, might make these configurable.
-        private SortedList<uint, Color> QualityDelimiter = new SortedList<uint, Color> {
-            {             0, Color.FromArgb(unchecked((int)0xFFFFFFFF)) },
-            {            64, Color.FromArgb(unchecked((int)0xFFFF0000)) },
-            {            80, Color.FromArgb(unchecked((int)0xFFFF9933)) },
-            {           112, Color.FromArgb(unchecked((int)0xFFFFFF66)) },
-            {           128, Color.FromArgb(unchecked((int)0xFFCCFF99)) },
-            { uint.MaxValue, Color.FromArgb(unchecked((int)0xFFCCFFCC)) },
-        };
+        private bool _hiderOn = true;
 
         public override bool Initialize(IPluginHost host)
         {
-            _highlightsOn = true;
+            _hiderOn = true;
 
             _host = host;
             if (_host == null) { Debug.Assert(false); }
@@ -81,10 +70,10 @@ namespace QualityHighlighter
             lv.DrawSubItem += Lv_DrawSubItem;
             lv.DrawColumnHeader += Lv_DrawColumnHeader;
 
-            _host.MainWindow.AddCustomToolBarButton(ToggleBtnCommand, "Toggle Highlights", "Toggle quality level highlights on or off.");
+            _host.MainWindow.AddCustomToolBarButton(ToggleBtnCommand, "Toggle Empty Password Hider", "Hide empty passwords or restore default visibility");
             _host.TriggerSystem.RaisingEvent += TriggerSystem_RaisingEvent;
 
-            _highlightsOn = _host.CustomConfig.GetBool(CustomConfigName, true);
+            _hiderOn = _host.CustomConfig.GetBool(CustomConfigName, true);
 
             return true;
         }
@@ -109,20 +98,20 @@ namespace QualityHighlighter
 
             _host.MainWindow.RemoveCustomToolBarButton(ToggleBtnCommand);
 
-            _host.CustomConfig.SetBool(CustomConfigName, _highlightsOn);
+            _host.CustomConfig.SetBool(CustomConfigName, _hiderOn);
         }
 
         public override string UpdateUrl
         {
             get
             {
-                return "https://rawgit.com/sdrichter/QualityHighlighter/master/VERSION";
+                return "https://rawgit.com/sdrichter/EmptyPasswordHider/master/VERSION";
             }
         }
         
         private void TriggerSystem_RaisingEvent(object sender, EcasRaisingEventArgs e)
         {
-            //Check if the event is our toggle button and toggle the highlights on or off accordingly.
+            //Check if the event is our toggle button and toggle the visibility on or off accordingly.
             EcasPropertyDictionary dict = e.Properties;
             if(dict == null) { Debug.Assert(false); return; }
 
@@ -130,7 +119,7 @@ namespace QualityHighlighter
 
             if (command != null && command.Equals(ToggleBtnCommand))
             {
-                _highlightsOn = !_highlightsOn;
+                _hiderOn = !_hiderOn;
 
                 //Save the scrollbar state so we can restore it.
                 ListView lv = (_host.MainWindow.Controls.Find(
@@ -139,7 +128,7 @@ namespace QualityHighlighter
 
                 int topIndex = lv.TopItem.Index;
 
-                if (!_highlightsOn)
+                if (!_hiderOn)
                 {
                     _host.MainWindow.RefreshEntriesList();
                 }
@@ -153,7 +142,7 @@ namespace QualityHighlighter
 
         private void Lv_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
-            if (_highlightsOn)
+            if (_hiderOn)
             {
                 ListViewItem lvi = e.Item;
                 PwListItem li = (lvi.Tag as PwListItem);
@@ -182,13 +171,8 @@ namespace QualityHighlighter
                 }
 
                 uint bits = QualityEstimation.EstimatePasswordBits(pw.ToCharArray());
-                foreach (KeyValuePair<uint, Color> kvp in QualityDelimiter)
-                {
-                    if (bits <= kvp.Key)
-                    {
-                        lvi.BackColor = kvp.Value;
-                        break;
-                    }
+                if (bits <= 0) {
+                  lvi.ForeColor = Color.FromArgb(unchecked((int)0xFFFFFFFF));
                 }
             }
 
